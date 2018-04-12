@@ -1,6 +1,8 @@
 (ns analog-neural-network-tools.core
   (:require [quil.core :as q]
+            [clojure.math.combinatorics :as combo]
             [quil.middleware :as m]))
+
 
 (def cut [0 0 0])
 (def etch [200 200 200])
@@ -50,6 +52,8 @@
   ;; (q/with-stroke cut
   ;;   (q/ellipse 0 0 radius radius))
 
+  (q/text-font (q/create-font "IM FELL Double Pica PRO" 32))
+  (q/text-align :center :center)
   (q/with-stroke etch
     (doseq [i points]
       (q/with-rotation
@@ -67,23 +71,24 @@
                             )))
                 y ((case mode :inner + :outer -) (* 1/2 radius)
                    (if (rational? i)
-                     (* 0.028 (q/height))
+                     (* 0.036 (q/height))
                      (* 0.02 (q/height))
                      ))]
 
             (if (rational? i)
-              (q/text-size (* 0.01 (q/height)))
-              (q/text-size (* 0.005 (q/height))))
+
+              (q/text-size (* 0.02 (q/height)))
+              (q/text-size (* 0.012 (q/height))))
             (q/push-matrix)
-            (q/translate (+ x) y)
+            (q/translate 0 y)
             (when (= mode :inner)
-              (q/text-align :right)
+              ;; (q/text-align :right)
               (q/rotate Math/PI)
               )
             (when numbers?
               (q/with-fill raster-etch
                 (q/text number 0 0)))
-            (q/text-align :left)
+            ;; (q/text-align :left)
             (q/pop-matrix)
             ))
 
@@ -146,13 +151,67 @@
     #(assoc % :points (range -9 9 0.05) :numbers? false :tick-size 2))
    {:fn identity :points (range -9 10 1) :max 10 :min -10 :radius 500}))
 
+(defn pattern [n size]
+  ;; (combo/combinations [[1 2] 2 3] 2)
+  (let [points
+        (for [i (range n)]
+          [(* (q/sin (* (/ (Math/PI) n) i 2)) size)
+           (* (q/cos (* (/ (Math/PI) n) i 2)) size)]
+          )]
+    (q/no-fill)
+    (apply q/stroke etch)
+    (doall (map #(apply q/ellipse (into % [size size])) points))
+    (doall
+     (map #(apply q/line (flatten %))
+          (combo/combinations
+           points 2)))))
+
+
+(defn star [n size in-size]
+  (q/begin-shape)
+  (doall
+   (for [i (range (* 2 n))]
+     (q/vertex
+      (* (q/sin (* (/ (Math/PI) (* 2 n)) i 2)) (if (= 0 (mod i 2)) size in-size))
+      (* (q/cos (* (/ (Math/PI) (* 2 n)) i 2)) (if (= 0 (mod i 2)) size in-size)))))
+  (q/end-shape :close)
+  )
+
+(q/ellipse)
+(second
+ (first
+  (combo/combinations
+   (for [i (range 5)]
+     [(* (q/sin (* (/ (Math/PI) 5) i 2)) 50)
+      (* (q/cos (* (/ (Math/PI) 5) i 2)) 50)]
+     )
+   2)))
+
+
 (defn indicator [r mode]
   ;; (q/ellipse 0 0 (* 0.46 (q/height)) (* 0.46 (q/height)))
+  (q/no-stroke)
   (q/triangle
    0 (* -1/2 r (q/height))
    (*  0.004 (q/height)) ((case mode :inward - +) (* -1/2 r (q/height)) (* 0.01 (q/height)))
    (* -0.004 (q/height)) ((case mode :inward - +) (* -1/2 r (q/height)) (* 0.01 (q/height)))
   ))
+
+(defn curved-word [word size offset spacing]
+  (apply q/fill raster-etch)
+  (doall
+   (for [i (range (count word))]
+     (q/with-rotation
+       ;; [0]
+       [(+ (q/radians (* (- (/ (+ -1.0 (count word)) 2) i) (/ 360 spacing)))
+           offset)]
+       ;; (q/no-fill)
+       ;; (apply q/stroke etch)
+       ;; (q/ellipse 0 145 30 30)
+       (q/text-align :center :baseline)
+       ;; (q/no-stroke)
+       (q/text (nth (map str word) i) 0 size)
+       ))))
 
 (defn draw [state]
   (q/background 255)
@@ -247,6 +306,44 @@
       (indicator 0.7 :inward)
       (indicator 0.46 :outward)
       )
+
+    ;; (pattern 6 30)
+    (q/stroke-weight 0.8)
+    ;; (pattern 2 170)
+    ;; (pattern 3 120)
+    (q/no-fill)
+    (apply q/stroke etch)
+    (pattern 6 (* 0.10 (q/height)))
+    ;; (star 6 120 46)
+    (star 3 40 12)
+    (star 6 (* 0.23 (q/height)) 90)
+    ;; (star 6 80 90)
+    (star 6 (* 0.10 (q/height)) (* 0.06 (q/height)))
+    ;; (star 6 120 180)
+    (star 6 (* 0.1 (q/height)) (* 0.1 (q/height)))
+    ;; (q/ellipse 0 0 80 80)
+    ;; (q/ellipse 0 0 240 240)
+    ;; (q/ellipse 0 0 360 360)
+    (q/ellipse 0 0 348 348)
+    ;; (q/ellipse 0 0 262 262)
+    ;; (star 3 180 22)
+    ;; (star 3 180 122)
+
+    ;; ;; (pattern 4 170)
+    ;; (pattern 5 170)
+    ;; (pattern 6 121)
+    ;; (pattern 6 61)
+    ;; (q/text-size 40)
+    (q/text-font (q/create-font "Big Caslon" 14))
+    (let [size 169
+          spacing 100]
+      (curved-word "ψυχῆς" size (q/radians 30) spacing)
+      (curved-word "νοῦς" size (q/radians 90) spacing)
+      (curved-word "νοῦς" size (q/radians 150) spacing)
+      (curved-word "νοῦς" size (q/radians 210) spacing)
+      (curved-word "νοῦς" size (q/radians 270) spacing)
+      (curved-word "νοῦς" size (q/radians 330) spacing))
+
     ;; (q/ellipse 0 0 400 400)
     ; draw centre point
     ;; (q/with-stroke [0]
@@ -255,11 +352,17 @@
     ;; (function-round
     ;;  {:fn identity :start 1 :end 10 :points (range -1 1 0.1) :max -1 :min 1 :radius 800})
     )
-  (q/save "test.png")
+  ;; (q/save "test.png")
   (when-not (= (:method state) :dev) (q/exit)))
 
+
+(map str "sdfasdf")
+(count "wer")
+
+(+ 1 2)
+
 (q/defsketch analog-neural-network-tools-dev
-  :size [1800 1800]
+  :size [800 800]
   :renderer :java2d
   :setup setup
   :update (update :dev)
